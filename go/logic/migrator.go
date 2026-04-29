@@ -104,14 +104,16 @@ type Migrator struct {
 
 func NewMigrator(context *base.MigrationContext, appVersion string) *Migrator {
 	migrator := &Migrator{
-		appVersion:                 appVersion,
-		hooksExecutor:              NewHooksExecutor(context),
-		migrationContext:           context,
-		parser:                     sql.NewAlterTableParser(),
-		ghostTableMigrated:         make(chan bool),
-		firstThrottlingCollected:   make(chan bool, 3),
-		rowCopyComplete:            make(chan error),
-		allEventsUpToLockProcessed: make(chan *lockProcessedStruct),
+		appVersion:               appVersion,
+		hooksExecutor:            NewHooksExecutor(context),
+		migrationContext:         context,
+		parser:                   sql.NewAlterTableParser(),
+		ghostTableMigrated:       make(chan bool),
+		firstThrottlingCollected: make(chan bool, 3),
+		rowCopyComplete:          make(chan error),
+		// Buffered to MaxRetries() to prevent a deadlock when waitForEventsUpToLock times out.
+		// (see https://github.com/github/gh-ost/pull/1637)
+		allEventsUpToLockProcessed: make(chan *lockProcessedStruct, context.MaxRetries()),
 
 		copyRowsQueue:     make(chan tableWriteFunc),
 		applyEventsQueue:  make(chan *applyEventStruct, base.MaxEventsBatchSize),
