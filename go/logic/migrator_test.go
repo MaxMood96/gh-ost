@@ -1095,6 +1095,9 @@ func (suite *MigratorTestSuite) TestRevert() {
 }
 
 func TestMigrator(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping migrator test suite in short mode")
+	}
 	suite.Run(t, new(MigratorTestSuite))
 }
 
