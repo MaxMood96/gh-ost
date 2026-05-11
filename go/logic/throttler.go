@@ -504,6 +504,8 @@ func (thlr *Throttler) initiateThrottlerChecks() {
 // throttle sees if throttling needs take place, and if so, continuously sleeps (blocks)
 // until throttling reasons are gone
 func (thlr *Throttler) throttle(onThrottled func()) {
+	timer := time.NewTimer(250 * time.Millisecond)
+	defer timer.Stop()
 	for {
 		// IsThrottled() is non-blocking; the throttling decision making takes place asynchronously.
 		// Therefore calling IsThrottled() is cheap
@@ -513,7 +515,12 @@ func (thlr *Throttler) throttle(onThrottled func()) {
 		if onThrottled != nil {
 			onThrottled()
 		}
-		time.Sleep(250 * time.Millisecond)
+		timer.Reset(250 * time.Millisecond)
+		select {
+		case <-thlr.migrationContext.GetContext().Done():
+			return
+		case <-timer.C:
+		}
 	}
 }
 
